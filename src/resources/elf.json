@@ -1,3 +1,126 @@
 {
-    "asdf":1234
+    "fileLabel" : "elf",
+    "fileMagicNumber" : "0x7F454C46",
+    "meta" : [
+        {
+            "label": "magic number",
+            "id" : "magic_number",
+            "description": "magic number",
+            "length" : 4
+        },
+        {
+            "label": "EI_CLASS",
+            "id" : "ei_class",
+            "description": "architecture",
+            "length" : 1
+        },
+        {
+            "label": "EI_DATA",
+            "id" : "ei_data",
+            "description": "byte order",
+            "length" : 1
+        },
+        {
+            "label": "EI_VERSION",
+            "id" : "ei_version",
+            "description": "version",
+            "length" : 1
+        },
+        {
+            "label": "EI_OSABI",
+            "id" : "ei_osabi",
+            "description": "os",
+            "length" : 1
+        },
+        {
+            "label": "EI_ABIVERSION",
+            "id" : "ei_abiversion",
+            "description": "os abi version",
+            "length" : 1
+        },
+        {
+            "label": "EI_PAD",
+            "id" : "ei_pad",
+            "description": "undefined",
+            "length" : 7
+        },
+        {
+            "label": "E_TYPE",
+            "id" : "e_type",
+            "description": "type",
+            "length" : 2
+        },
+        {
+            "label": "E_MACHINE",
+            "id" : "e_machine",
+            "description": "machine",
+            "length" : 2
+        },
+        {
+            "label": "E_VERSION",
+            "id" : "e_version",
+            "description": "version",
+            "length" : 4
+        },
+        {
+            "label": "E_ENTRY",
+            "id" : "e_entry",
+            "description": "address of entrypoint",
+            "length" : 8
+        },
+        {
+            "label": "E_PHOFF",
+            "id" : "e_phoff",
+            "description": "beginning of header table",
+            "length" : 8
+        },
+        {
+            "label": "E_SHOFF",
+            "id" : "e_shoff",
+            "description": "beginning of section header table",
+            "length" : 8
+        },
+        {
+            "label": "E_FLAGS",
+            "id" : "e_flags",
+            "description": "dependent field by architecture",
+            "length" : 4
+        },
+        {
+            "label": "E_EHSIZE",
+            "id" : "e_ehsize",
+            "description": "header size",
+            "length" : 2
+        },
+        {
+            "label": "E_PHENTSIZE",
+            "id" : "e_phentsize",
+            "description": "size of program header entry",
+            "length" : 2
+        },
+        {
+            "label": "E_PHNUM",
+            "id" : "e_phnum",
+            "description": "number of program header entry",
+            "length" : 2
+        },
+        {
+            "label": "E_SHENTSIZE",
+            "id" : "e_shentsize",
+            "description": "size of program header entry",
+            "length" : 2
+        },
+        {
+            "label": "E_SHNUM",
+            "id" : "e_shnum",
+            "description": "number of program header entry",
+            "length" : 2
+        },
+        {
+            "label": "E_SHSTRNDX",
+            "id" : "e_shstrndx",
+            "description": "index",
+            "length" : 2
+        }
+    ]
 }
