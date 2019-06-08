@@ -3,55 +3,343 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { tmpdir } from 'os';
+import { BinaryFileLoader } from './binaryFileLoader';
 
 export class MetaInfoLoader {
-    private fileType : string;
+    // path of containing meta information
     private resPath : vscode.Uri;
+    // meta file name
     private readonly fileName : string;
+    // Normally, binary file has no file extension.
+    // We need to know the way, such as magic number, to discriminate a format of a certain file
+    private fileLabel : string;
 
-    private label? : string;
+    // file magic number
     private fileMagicNumber? : string;
-
-    private fileMetaInfo? : MetaField[];
+    // file meta information
+    private fileMetaInfo : Array<MetaField>;
+    public binaryAndMetaMap : Array<[SourcePos, MetaField]>;
 
     constructor (fileType : string, resPath : vscode.Uri) {
-        this.fileType = fileType;
+        // file load
+        this.fileLabel = fileType;
         this.resPath = resPath;
-        this.fileName = this.fileType + ".json";
+        this.fileName = this.fileLabel + ".json";
+        this.fileMetaInfo = Array<MetaField>();
+        this.binaryAndMetaMap  = new Array<[SourcePos, MetaField]>();
+
+        // load meta information based on json file
         this.loadData();
+
+        // resolve reference field
+        this.resolveReferField();
     }
 
+    /**
+     * load resource file to get binary file
+     */
     private loadData() {
         let jsonString = fs.readFileSync(path.join(this.resPath.fsPath, this.fileName), "utf8");
         let obj = JSON.parse(jsonString);
+        let baseOffsetFlag = false;
+        let pivotObject : MetaField | undefined;
+
+        this.fileLabel = obj.fileLabel;
+        this.fileMagicNumber = obj.fileMagicNumber;
+
+        // load meta
+        this.fileMetaInfo = obj.meta.reduce((data : any, item : any) => {
+            const meta = data.meta;
+            let prevField : MetaField | undefined = meta[meta.length - 1];
+            let currField = new MetaField(item.id, item.label, item.description);
+            let accLen = data.accLen;
+
+            // specify length and length type
+            if (item.length !== undefined) {
+                currField.length = item.length;
+                currField.relativeOffset = accLen;
+                accLen += item.length;
+                currField.valueLengthType = ValueLengthType.FIXED;
+            }
+            else {
+                currField.valueLengthType = ValueLengthType.VARIABLE;
+                if (prevField != undefined
+                    && prevField.valueLengthType == ValueLengthType.FIXED) {
+                    currField.relativeOffset = accLen;
+                } else {
+                    accLen = 0;
+                }
+            }
+
+            if (prevField != undefined) {
+                // previous field is VARIABLE and current field is FIXED, or
+                // previous field is VARIABLE and current field is VARIABLE
+                if ( (prevField.valueLengthType == ValueLengthType.VARIABLE
+                    && currField.valueLengthType == ValueLengthType.FIXED) ||
+                    (prevField.valueLengthType == ValueLengthType.VARIABLE
+                    && currField.valueLengthType == ValueLengthType.VARIABLE)) {
+                    pivotObject = currField;
+                } else {
+                    currField.baseOffsetField = pivotObject;
+                }
+            }
+            // previous field is undefined, that is, current field is the first element
+            else {
+                pivotObject = currField;
+            }
+
+            meta.push(currField);
+
+            return {
+                "meta" : meta,
+                "accLen" : accLen
+            };
+        }, {
+            "meta" : Array<MetaField>(),
+            "accLen" : 0
+        }).meta;
+    }
+
+    /**
+     * resolving reference field
+     */
+    private resolveReferField () {
+        // change meta information to map, metaid and field
+        // this variable is used to resolve reference fields
+        let fileMetaMap = this.fileMetaInfo.reduce(
+            (data : any, item) => {
+                data[item.fieldId] = item;
+                return data;
+            }, {});
+
+        this.fileMetaInfo.forEach(
+            field => {
+                field.referField.forEach(
+                    referField => {
+                        if (fileMetaMap.has(referField)) {
+                            let item = fileMetaMap.get(referField);
+                            if (item !== undefined)
+                                field.addReferField(item);
+                        }
+                    }
+                );
+            }
+        );
+    }
+
+    public applyBinaryInfo() {
+        this.fileMetaInfo.reduce(
+            (data : any, field) => {
+                field.prevField = data;
+
+                // TODO: handling optional field
+                return field;
+            }, undefined
+        );
+    }
+
+    get fileMeta() {
+        return this.fileMetaInfo;
     }
 }
 
+/**
+ * class 'SourcePos' is used to specify relative position in binary file.
+ */
+export class SourcePos {
+    private startPos : number;
+    private endPos : number;
+
+    constructor (startpos : number, endpos : number) {
+        this.startPos = startpos;
+        this.endPos = endpos;
+    }
+
+    get binaryStartPos() {
+        return this.startPos;
+    }
+
+    get binaryEndPos() {
+        return this.endPos;
+    }
+
+    get length() {
+        return this.endPos - this.startPos;
+    }
+}
+
+/**
+ * This class, MetaField, reflects a whole information of binary field
+ * Two types of binary field: plain and reference field
+ */
 export class MetaField {
-    private id : string;
-    private _value? : number;
-    private _offset? : number;
-    private _length? : number;
-    private _fieldType? : FieldType;
-    private _fieldLengthType? : FieldLengthType;
-    private _referField? : MetaField;
+    /**
+     * field id to reference from another field
+     */
+    public readonly fieldId : string;
+    /**
+     * fieldLabel is to show field name
+     */
+    public readonly fieldLabel? : string;
+    public readonly fieldDescription? : string;
 
-    constructor (id : string) {
-        this.id = id;
+    public fieldType? : FieldType;
+    public valueType : ValueType;
+    public valueLengthType? : ValueLengthType;
+
+    public referField : Array<string>;
+    private _resolvedReferField : Array<MetaField>;
+
+    private _prevField? : MetaField;
+
+    /**
+     * a certain field can be specified as the following:
+     * value: readonly value
+     * offset: offset of another field, default to 0
+     * length: length of another field
+     */
+    private _value? : Buffer;
+    private _offset? : number | undefined;
+    private _relativeOffset : number | undefined;
+    private _length? : number | undefined;
+    private _arraysize : number;
+    private _arraylength : number;
+    public baseOffsetField? : MetaField;
+
+    private _actualRawValue? : SourcePos | undefined;
+
+    constructor (id : string, label : string, desc : string,
+            field = FieldType.PLAIN, valueType = ValueType.PLAIN) {
+        this.fieldId = id;
+        this.fieldLabel = label;
+        this.fieldDescription = desc;
+
+        this.fieldType = field;
+        this.valueType = valueType;
+
+        this.referField = new Array<string>();
+        this._resolvedReferField = new Array<MetaField>(ValueType.VALUETYPE_END);
+
+        this._arraysize = 0;
+        this._arraylength = 0;
+        this._relativeOffset = 0;
     }
 
-    set value(val : number) {
-        this._value = val;
+    set value (buf : Buffer) {
+        this._value = buf;
+    }
+
+    set length (len : number | undefined) {
+        this._length = len;
+    }
+
+    set relativeOffset (off : number) {
+        this._relativeOffset = off;
+    }
+
+    set prevField (prev : MetaField | undefined) {
+        this._prevField = prev;
+    }
+
+    get offset () : number | undefined {
+        // if offset is not evaluated yet
+        if (this._offset == undefined) {
+            // baseOffsetField can be never undefined
+            if (this.baseOffsetField != undefined) {
+                // get actual value of specifying this field
+                if (this._resolvedReferField[ValueType.OFFSET] != undefined) {
+                    const rawVal = this._resolvedReferField[ValueType.OFFSET].rawValue;
+                    // if field type is REFERENCE
+                    if (rawVal != undefined) {
+                        // specify offset field
+                        this._offset = BinaryFileLoader.instance.openedFile.readUIntBE(
+                                            rawVal.binaryStartPos, rawVal.binaryEndPos);
+                    }
+                }
+                // if field type is PLAIN
+                if (this.baseOffsetField.offset != undefined
+                    && this._relativeOffset != undefined) {
+                    // offset is specified relatively by a basis of specific field
+                    this._offset = this.baseOffsetField.offset + this._relativeOffset;
+                }
+                else if (this._prevField != undefined
+                        && this._prevField.offset != undefined
+                        && this._prevField.length != undefined){
+                    this._offset = this._prevField.offset + this._prevField.length;
+                }
+                else {
+                    this._offset = 0;
+                }
+            }
+            else {
+                this._offset = 0;
+            }
+        }
+
+        return this._offset;
+    }
+
+    get length () : number | undefined {
+        // if length is not evaluated yet
+        if (this._length == undefined) {
+            // get actual value of specifying this field
+            const rawVal = this._resolvedReferField[ValueType.LENGTH].rawValue;
+            if (rawVal != undefined)
+                // specify length field
+                this._length = BinaryFileLoader.instance.openedFile.readUIntBE(
+                                    rawVal.binaryStartPos, rawVal.binaryEndPos);
+        }
+
+        return this._length;
+    }
+
+    get rawValue() : SourcePos | undefined {
+        // offset or length is not evaluated yet
+        let offset = this.offset;
+        let length = this.length;
+        
+        // initialize actual value in file
+        if (offset != undefined && length != undefined)
+            this._actualRawValue = new SourcePos(offset, offset + length);
+        else
+            return undefined;
+
+        return this._actualRawValue;
+    }
+
+    get resolvedReferField () {
+        return this._resolvedReferField;
+    }
+
+    public addReferField(field : MetaField) {
+        this._resolvedReferField[field.valueType] = field;
     }
 }
 
-enum FieldType {
-    HEADER,
+export enum ValueType {
     PLAIN,
-    REFERENCE
+    LENGTH,
+    OFFSET,
+    ARRAYSIZE,
+    ARRAYLENGTH,
+    TERMINATION,
+    VALUETYPE_END
 }
 
-enum FieldLengthType {
+export enum FieldType {
+    // this field don't have a reference from another field
+    // contains only plain hexa-data
+    PLAIN,
+    // this field have a reference to another field
+    // value could be used to specify offset, length, some countable thing and so on.
+    REFERENCE,
+    ARRAY
+}
+
+export enum ValueLengthType {
     VARIABLE,
-    FIXED
+    FIXED,
+    TERMINATION,
+    UNDEFINED
 }
