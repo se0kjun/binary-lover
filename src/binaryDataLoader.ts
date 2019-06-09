@@ -72,10 +72,25 @@ export class BinaryDataLoader {
             item => {
                 let tmp = item.rawValue;
                 if (tmp != undefined) {
-                    aa += `<div>${tmp.binaryStartPos} 
-                    || ${tmp.binaryEndPos} 
-                    || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', tmp.binaryStartPos, tmp.binaryEndPos)}
-                    || ${item.fieldDescription} </div>`;
+                    if (item.fieldType == loader.FieldType.ARRAY) {
+                        let len = item.arrayLength;
+                        let size = item.arraySize;
+                        if (len) {
+                            Array.from({length : len}, (x, i) => {
+                                if (tmp && size)
+                                    aa += `<div>${tmp.binaryStartPos + i*size} 
+                                    || ${tmp.binaryEndPos + i*size}
+                                    || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', tmp.binaryStartPos + i*size, tmp.binaryStartPos + i*size + size)}
+                                    || ${item.fieldDescription} </div>`;
+                            });
+                        }
+                    }
+                    else {
+                        aa += `<div>${tmp.binaryStartPos} 
+                        || ${tmp.binaryEndPos} 
+                        || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', tmp.binaryStartPos, tmp.binaryEndPos)}
+                        || ${item.fieldDescription} </div>`;
+                    }
                 }
             }
         );

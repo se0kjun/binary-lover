@@ -52,9 +52,11 @@ export class MetaInfoLoader {
         this.fileMetaInfo = obj.meta.reduce((data : any, item : any) => {
             const meta = data.meta;
             let prevField : MetaField | undefined = meta[meta.length - 1];
-            let currField = new MetaField(item.id, item.label, item.description);
+            let currField = new MetaField(item.id, item.label, item.description, item.fieldType, ValueMap[item.valueType]);
             let accLen = data.accLen;
 
+            if (item.referField != undefined)
+                currField.referField = item.referField;
             // specify length and length type
             if (item.length !== undefined) {
                 currField.length = item.length;
@@ -107,11 +109,11 @@ export class MetaInfoLoader {
     private resolveReferField () {
         // change meta information to map, metaid and field
         // this variable is used to resolve reference fields
-        let fileMetaMap = this.fileMetaInfo.reduce(
+        let fileMetaMap : Map<string, MetaField> = this.fileMetaInfo.reduce(
             (data : any, item) => {
-                data[item.fieldId] = item;
+                data.set(item.fieldId, item);
                 return data;
-            }, {});
+            }, new Map<string, MetaField>());
 
         this.fileMetaInfo.forEach(
             field => {
@@ -203,8 +205,8 @@ export class MetaField {
     private _offset? : number | undefined;
     private _relativeOffset : number | undefined;
     private _length? : number | undefined;
-    private _arraysize : number;
-    private _arraylength : number;
+    private _arraysize : number | undefined;
+    private _arraylength : number | undefined;
     public baseOffsetField? : MetaField;
 
     private _actualRawValue? : SourcePos | undefined;
@@ -221,8 +223,6 @@ export class MetaField {
         this.referField = new Array<string>();
         this._resolvedReferField = new Array<MetaField>(ValueType.VALUETYPE_END);
 
-        this._arraysize = 0;
-        this._arraylength = 0;
         this._relativeOffset = 0;
     }
 
@@ -247,16 +247,6 @@ export class MetaField {
         if (this._offset == undefined) {
             // baseOffsetField can be never undefined
             if (this.baseOffsetField != undefined) {
-                // get actual value of specifying this field
-                if (this._resolvedReferField[ValueType.OFFSET] != undefined) {
-                    const rawVal = this._resolvedReferField[ValueType.OFFSET].rawValue;
-                    // if field type is REFERENCE
-                    if (rawVal != undefined) {
-                        // specify offset field
-                        this._offset = BinaryFileLoader.instance.openedFile.readUIntBE(
-                                            rawVal.binaryStartPos, rawVal.binaryEndPos);
-                    }
-                }
                 // if field type is PLAIN
                 if (this.baseOffsetField.offset != undefined
                     && this._relativeOffset != undefined) {
@@ -273,7 +263,19 @@ export class MetaField {
                 }
             }
             else {
-                this._offset = 0;
+                // get actual value of specifying this field
+                if (this._resolvedReferField[ValueType.OFFSET] != undefined) {
+                    const rawVal = this._resolvedReferField[ValueType.OFFSET].rawValue;
+                    // if field type is REFERENCE
+                    if (rawVal != undefined) {
+                        // specify offset field
+                        this._offset = BinaryFileLoader.instance.openedFile.readUIntLE(
+                                            rawVal.binaryStartPos, (rawVal.length > 6) ? 6 : rawVal.length);
+                    }
+                }
+                else {
+                    this._offset = 0;
+                }
             }
         }
 
@@ -284,24 +286,78 @@ export class MetaField {
         // if length is not evaluated yet
         if (this._length == undefined) {
             // get actual value of specifying this field
-            const rawVal = this._resolvedReferField[ValueType.LENGTH].rawValue;
-            if (rawVal != undefined)
-                // specify length field
-                this._length = BinaryFileLoader.instance.openedFile.readUIntBE(
-                                    rawVal.binaryStartPos, rawVal.binaryEndPos);
+            if (this._resolvedReferField[ValueType.LENGTH] != undefined) {
+                const rawVal = this._resolvedReferField[ValueType.LENGTH].rawValue;
+                if (rawVal != undefined)
+                    // specify length field
+                    this._length = BinaryFileLoader.instance.openedFile.readUIntLE(
+                                        rawVal.binaryStartPos, (rawVal.length > 6) ? 6 : rawVal.length);
+            }
+            else if (this.fieldType == FieldType.ARRAY) {
+                let arraysize = this.arraySize, arraylength = this.arrayLength;
+                if (arraysize != undefined && arraylength != undefined) {
+                    this._length = arraysize * arraylength;
+                }
+            }
         }
 
         return this._length;
+    }
+
+    get arraySize() : number | undefined {
+        // if array size is not evaluated yet
+        if (this._arraysize == undefined) {
+            // get actual value of specifying this field
+            if (this._resolvedReferField[ValueType.ARRAYSIZE] != undefined) {
+                const rawVal = this._resolvedReferField[ValueType.ARRAYSIZE].rawValue;
+                if (rawVal != undefined)
+                    // specify length field
+                    this._arraysize = BinaryFileLoader.instance.openedFile.readUIntLE(
+                        rawVal.binaryStartPos, (rawVal.length > 6) ? 6 : rawVal.length);
+            }
+        }
+
+        return this._arraysize;
+    }
+
+    get arrayLength() : number | undefined {
+        // if array size is not evaluated yet
+        if (this._arraylength == undefined) {
+            // get actual value of specifying this field
+            if (this._resolvedReferField[ValueType.ARRAYLENGTH]) {
+                const rawVal = this._resolvedReferField[ValueType.ARRAYLENGTH].rawValue;
+                if (rawVal != undefined)
+                    // specify length field
+                    this._arraylength = BinaryFileLoader.instance.openedFile.readUIntLE(
+                        rawVal.binaryStartPos, (rawVal.length > 6) ? 6 : rawVal.length);
+            }
+        }
+
+        return this._arraylength;
     }
 
     get rawValue() : SourcePos | undefined {
         // offset or length is not evaluated yet
         let offset = this.offset;
         let length = this.length;
-        
+        let arraysize, arraylength;
+
+        if (this.fieldType == FieldType.ARRAY) {
+            arraysize = this.arraySize;
+            arraylength = this.arrayLength;
+        }
+
         // initialize actual value in file
-        if (offset != undefined && length != undefined)
-            this._actualRawValue = new SourcePos(offset, offset + length);
+        if (offset != undefined && length != undefined) {
+            if (this.fieldType == FieldType.ARRAY
+                && arraysize && arraylength) {
+                this._actualRawValue = new SourcePos(
+                    offset, offset + arraysize*arraylength);
+            }
+            else {
+                this._actualRawValue = new SourcePos(offset, offset + length);
+            }
+        }
         else
             return undefined;
 
@@ -327,14 +383,23 @@ export enum ValueType {
     VALUETYPE_END
 }
 
+const ValueMap : { [ index : string ] : ValueType } = {
+    PLAIN : ValueType.PLAIN,
+    LENGTH : ValueType.LENGTH,
+    OFFSET : ValueType.OFFSET,
+    ARRAYSIZE : ValueType.ARRAYSIZE,
+    ARRAYLENGTH : ValueType.ARRAYLENGTH,
+    TERMINATION : ValueType.TERMINATION
+};
+
 export enum FieldType {
     // this field don't have a reference from another field
     // contains only plain hexa-data
-    PLAIN,
+    PLAIN = "PLAIN",
     // this field have a reference to another field
     // value could be used to specify offset, length, some countable thing and so on.
-    REFERENCE,
-    ARRAY
+    REFERENCE = "REFERENCE",
+    ARRAY = "ARRAY"
 }
 
 export enum ValueLengthType {
