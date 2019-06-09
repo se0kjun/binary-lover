@@ -77,11 +77,25 @@ export class BinaryDataLoader {
                         let size = item.arraySize;
                         if (len) {
                             Array.from({length : len}, (x, i) => {
-                                if (tmp && size)
-                                    aa += `<div>${tmp.binaryStartPos + i*size} 
-                                    || ${tmp.binaryEndPos + i*size}
-                                    || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', tmp.binaryStartPos + i*size, tmp.binaryStartPos + i*size + size)}
-                                    || ${item.fieldDescription} </div>`;
+                                if (tmp && size) {
+                                    let value = item.rawEntryValue(i);
+                                    if (value) {
+                                        value.forEach((entry, idx) => {
+                                            let mttmp = item.arrayEntryField[idx];
+                                            aa += `<div> &gt&gt&gt ${entry.binaryStartPos}
+                                            || ${entry.binaryEndPos}
+                                            || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', entry.binaryStartPos, entry.binaryEndPos)}
+                                            || ${mttmp.fieldDescription} </div>`;
+                                        });
+                                    }
+                                    else {
+                                        aa += `<div>${tmp.binaryStartPos + i*size}
+                                        || ${tmp.binaryEndPos + i*size}
+                                        || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', tmp.binaryStartPos + i*size, tmp.binaryStartPos + i*size + size)}
+                                        || ${item.fieldDescription} </div>`;
+                                    }
+                                    aa += "<div>======</div>";
+                                }
                             });
                         }
                     }

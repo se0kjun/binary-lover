@@ -55,6 +55,24 @@ export class MetaInfoLoader {
             let currField = new MetaField(item.id, item.label, item.description, item.fieldType, ValueMap[item.valueType]);
             let accLen = data.accLen;
 
+            if (item.fieldType == FieldType.ARRAY) {
+                let accArrayLen = 0;
+                if (item.entry) {
+                    currField.arrayEntryField = item.entry.reduce((entries : Array<MetaField>, arrayItem: { id: string; label: string; description: string; length: number | undefined; }) => {
+                        let arrayItemField = new MetaField(arrayItem.id, arrayItem.label, arrayItem.description);
+                        arrayItemField.length = arrayItem.length;
+                        arrayItemField.baseOffsetField = item.entry[0];
+                        arrayItemField.relativeOffset = accArrayLen;
+                        entries.push(arrayItemField);
+
+                        if (arrayItem.length)
+                            accArrayLen += arrayItem.length;
+
+                        return entries;
+                    }, new Array<MetaField>());
+                }
+            }
+
             if (item.referField != undefined)
                 currField.referField = item.referField;
             // specify length and length type
@@ -195,6 +213,8 @@ export class MetaField {
 
     private _prevField? : MetaField;
 
+    public arrayEntryField : Array<MetaField>;
+
     /**
      * a certain field can be specified as the following:
      * value: readonly value
@@ -223,6 +243,7 @@ export class MetaField {
         this.referField = new Array<string>();
         this._resolvedReferField = new Array<MetaField>(ValueType.VALUETYPE_END);
 
+        this.arrayEntryField = new Array<MetaField>();
         this._relativeOffset = 0;
     }
 
@@ -364,6 +385,28 @@ export class MetaField {
         return this._actualRawValue;
     }
 
+    public rawEntryValue(index : number) : Array<SourcePos> | undefined {
+        let arrayOffset : number;
+
+        if (this.arrayEntryField.length == 0) {
+            return undefined;
+        }
+
+        if (this.arraySize && this.offset)
+            arrayOffset = this.offset + index * this.arraySize;
+
+        return this.arrayEntryField.reduce((prev, curr) => {
+            let tmp : SourcePos;
+            if (curr.length) {
+                tmp = new SourcePos(arrayOffset, arrayOffset + curr.length);
+                arrayOffset += curr.length;
+                prev.push(tmp);
+            }
+
+            return prev;
+        }, new Array<SourcePos>());
+    }
+
     get resolvedReferField () {
         return this._resolvedReferField;
     }
@@ -372,6 +415,32 @@ export class MetaField {
         this._resolvedReferField[field.valueType] = field;
     }
 }
+
+// class ArrayMetaField {
+//     private _arrayOffset : number;
+//     private _entrySize : number;
+//     private _entryLength : number;
+
+//     private _arrayField? : Array<MetaField> | undefined;
+//     private _elementOffset : number;
+
+//     constructor (offset : number, size : number, length : number) {
+//         this._arrayOffset = offset;
+//         this._entrySize = size;
+//         this._entryLength = length;
+//     }
+
+//     public getItem(index : number) : SourcePos {
+//     }
+
+//     set arrayField(item : Array<MetaField>) {
+//         this._arrayField = item;
+//     }
+
+//     get arrayAppliedData() : Array<SourcePos> {
+//         return this._arrayField;
+//     }
+// }
 
 export enum ValueType {
     PLAIN,
