@@ -72,13 +72,15 @@
             "label": "E_PHOFF",
             "id" : "e_phoff",
             "description": "beginning of header table",
-            "length" : 8
+            "length" : 8,
+            "valueType" : "OFFSET"
         },
         {
             "label": "E_SHOFF",
             "id" : "e_shoff",
             "description": "beginning of section header table",
-            "length" : 8
+            "length" : 8,
+            "valueType" : "OFFSET"
         },
         {
             "label": "E_FLAGS",
@@ -96,31 +98,55 @@
             "label": "E_PHENTSIZE",
             "id" : "e_phentsize",
             "description": "size of program header entry",
-            "length" : 2
+            "length" : 2,
+            "valueType" : "ARRAYSIZE"
         },
         {
             "label": "E_PHNUM",
             "id" : "e_phnum",
             "description": "number of program header entry",
-            "length" : 2
+            "length" : 2,
+            "valueType" : "ARRAYLENGTH"
         },
         {
             "label": "E_SHENTSIZE",
             "id" : "e_shentsize",
             "description": "size of program header entry",
-            "length" : 2
+            "length" : 2,
+            "valueType" : "ARRAYSIZE"
         },
         {
             "label": "E_SHNUM",
             "id" : "e_shnum",
             "description": "number of program header entry",
-            "length" : 2
+            "length" : 2,
+            "valueType" : "ARRAYLENGTH"
         },
         {
             "label": "E_SHSTRNDX",
             "id" : "e_shstrndx",
             "description": "index",
             "length" : 2
+        },
+        {
+            "label": "PROGRAM_HEADER",
+            "id" : "program_header",
+            "fieldType" : "ARRAY",
+            "referField" : [
+                "e_phentsize",
+                "e_phnum",
+                "e_phoff"
+            ]
+        },
+        {
+            "label": "SECTION_HEADER",
+            "id" : "section_header",
+            "fieldType" : "ARRAY",
+            "referField" : [
+                "e_shentsize",
+                "e_shnum",
+                "e_shoff"
+            ]
         }
     ]
 }
