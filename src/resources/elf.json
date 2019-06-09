@@ -136,6 +136,56 @@
                 "e_phentsize",
                 "e_phnum",
                 "e_phoff"
+            ],
+            "entry" : [
+                {
+                    "label": "P_TYPE",
+                    "id" : "p_type",
+                    "description": "program type",
+                    "length" : 4
+                },
+                {
+                    "label": "P_FLAGS",
+                    "id" : "p_flags",
+                    "description": "program flags",
+                    "length" : 4
+                },
+                {
+                    "label": "P_OFFSET",
+                    "id" : "p_offset",
+                    "description": "program offset",
+                    "length" : 8
+                },
+                {
+                    "label": "P_VADDR",
+                    "id" : "p_vaddr",
+                    "description": "program virtual address",
+                    "length" : 8
+                },
+                {
+                    "label": "P_PADDR",
+                    "id" : "p_paddr",
+                    "description": "program physical address",
+                    "length" : 8
+                },
+                {
+                    "label": "P_FILESZ",
+                    "id" : "p_filesz",
+                    "description": "program size",
+                    "length" : 8
+                },
+                {
+                    "label": "P_MEMSZ",
+                    "id" : "p_memsz",
+                    "description": "program memsz",
+                    "length" : 8
+                },
+                {
+                    "label": "P_ALIGN",
+                    "id" : "p_align",
+                    "description": "program align",
+                    "length" : 8
+                }
             ]
         },
         {
