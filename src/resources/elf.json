@@ -196,6 +196,68 @@
                 "e_shentsize",
                 "e_shnum",
                 "e_shoff"
+            ],
+            "entry" : [
+                {
+                    "label": "SH_NAME",
+                    "id" : "sh_name",
+                    "description": "section name",
+                    "length" : 4
+                },
+                {
+                    "label": "SH_TYPE",
+                    "id" : "sh_type",
+                    "description": "section type",
+                    "length" : 4
+                },
+                {
+                    "label": "SH_FLAGS",
+                    "id" : "sh_flags",
+                    "description": "section flags",
+                    "length" : 8
+                },
+                {
+                    "label": "SH_ADDR",
+                    "id" : "sh_addr",
+                    "description": "section address",
+                    "length" : 8
+                },
+                {
+                    "label": "SH_OFFSET",
+                    "id" : "sh_offset",
+                    "description": "section offset",
+                    "length" : 8
+                },
+                {
+                    "label": "SH_SIZE",
+                    "id" : "sh_size",
+                    "description": "section size",
+                    "length" : 8
+                },
+                {
+                    "label": "SH_LINK",
+                    "id" : "sh_link",
+                    "description": "section link",
+                    "length" : 4
+                },
+                {
+                    "label": "SH_INFO",
+                    "id" : "sh_info",
+                    "description": "section info",
+                    "length" : 4
+                },
+                {
+                    "label": "SH_ADDRALIGN",
+                    "id" : "sh_addralign",
+                    "description": "alignment of the section",
+                    "length" : 8
+                },
+                {
+                    "label": "SH_ENTSIZE",
+                    "id" : "sh_entsize",
+                    "description": "entry size",
+                    "length" : 8
+                }
             ]
         }
     ]
