@@ -122,7 +122,7 @@ export class BinaryDataLoader {
     }
 
     private _initDefaultViewer() : string {
-        const sizeoOfLazyLoading : any = vscode.workspace.getConfiguration("conf.resource").get("partialUpdateSize");
+        const sizeoOfLazyLoading : any = vscode.workspace.getConfiguration("conf.resource").get("lazyLoadingSize");
         const scriptPath = vscode.Uri.file(
             path.join(this._extensionPath, 'media', 'main.js'));
         const scriptUri = scriptPath.with({ scheme: 'vscode-resource' });
@@ -137,7 +137,9 @@ export class BinaryDataLoader {
             <title>Binary viewer</title>
         </head>
         <body>
-            ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += sizeoOfLazyLoading)}
+            <div id="container">
+                ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += sizeoOfLazyLoading)}
+            </div>
             <script nonce="${nonce}" src="${scriptUri}"></script>
         </body>
         </html>`;
@@ -169,7 +171,20 @@ export class BinaryDataLoader {
     }
 
     private _update() {
-        this._panel.webview.html = this._buildHTML();
+        this._panel.webview.html = this._initDefaultViewer();;
+    }
+
+    private _handleEvent(event : any) {
+        switch (event.command) {
+            case 'lazyLoad':
+                const sizeoOfLazyLoading : any = vscode.workspace.getConfiguration("conf.resource").get("lazyLoadingSize");
+                this._panel.webview.postMessage({
+                    command : 'onload',
+                    lazyHTML : this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += sizeoOfLazyLoading),
+                    response : ''
+                });
+                break;
+        }
     }
 
     private _getNonce() : string {
