@@ -132,6 +132,8 @@ export class BinaryDataLoader {
         const scriptPath = vscode.Uri.file(
             path.join(this._extensionPath, 'media', 'main.js'));
         const scriptUri = scriptPath.with({ scheme: 'vscode-resource' });
+        const styleUri = vscode.Uri.file(
+            path.join(this._extensionPath, 'media', 'main.css')).with({ scheme: 'vscode-resource'});
         const nonce = this._getNonce();
 
         return `<!DOCTYPE html>
@@ -139,7 +141,7 @@ export class BinaryDataLoader {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src 'nonce-${nonce}';">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src 'nonce-${nonce}'; style-src vscode-resource:;">
             <title>Binary viewer</title>
         </head>
         <body>
@@ -147,6 +149,7 @@ export class BinaryDataLoader {
                 ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += sizeoOfLazyLoading)}
             </div>
             <script nonce="${nonce}" src="${scriptUri}"></script>
+            <link rel="stylesheet" href="${styleUri}"/>
         </body>
         </html>`;
     }

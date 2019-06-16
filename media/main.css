@@ -1,0 +1,11 @@
+span {
+    font-family: var(--vscode-editor-font-family);
+}
+
+div {
+    font-family: var(--vscode-editor-font-family);
+}
+
+div:not(#container):hover {
+    background-color: grey;
+}
