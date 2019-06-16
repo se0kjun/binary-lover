@@ -17,6 +17,7 @@ export class BinaryDataLoader {
     private binaryFileBuffer! : Buffer;
     private readonly _extensionPath : string;
     private readonly _binaryFormat : string;
+    private readonly _lazyLoadSize : number;
 
     private lazyLoadCnt : number;
 
@@ -42,9 +43,13 @@ export class BinaryDataLoader {
     }
 
     private constructor (panel : vscode.WebviewPanel, binFormat : string, extPath : string) {
+        const sizeOfLazyLoading : any = vscode.workspace.getConfiguration("conf.resource").get("lazyLoadingSize");
+        const numberOfBin : any = vscode.workspace.getConfiguration("conf.resource").get("numberOfBinaryInLine");
+
         this._panel = panel;
         this._extensionPath = extPath;
         this._binaryFormat = binFormat;
+        this._lazyLoadSize = sizeOfLazyLoading + sizeOfLazyLoading % numberOfBin;
         this.lazyLoadCnt = 0;
 
         const filePath : vscode.Uri = vscode.Uri.file(path.join(this._extensionPath, 'src', 'resources'));
@@ -128,10 +133,8 @@ export class BinaryDataLoader {
     }
 
     private _initDefaultViewer() : string {
-        const sizeoOfLazyLoading : any = vscode.workspace.getConfiguration("conf.resource").get("lazyLoadingSize");
-        const scriptPath = vscode.Uri.file(
-            path.join(this._extensionPath, 'media', 'main.js'));
-        const scriptUri = scriptPath.with({ scheme: 'vscode-resource' });
+        const scriptUri = vscode.Uri.file(
+            path.join(this._extensionPath, 'media', 'main.js')).with({ scheme: 'vscode-resource' });
         const styleUri = vscode.Uri.file(
             path.join(this._extensionPath, 'media', 'main.css')).with({ scheme: 'vscode-resource'});
         const nonce = this._getNonce();
@@ -146,7 +149,7 @@ export class BinaryDataLoader {
         </head>
         <body>
             <div id="container">
-                ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += sizeoOfLazyLoading)}
+                ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize)}
             </div>
             <script nonce="${nonce}" src="${scriptUri}"></script>
             <link rel="stylesheet" href="${styleUri}"/>
@@ -159,21 +162,20 @@ export class BinaryDataLoader {
 
         return bfileLoader.BinaryFileLoader.instance.openedFile.slice(start, end)
             .reduce((data : { output : string, lineBuf : Buffer, bufOffset : number }, val : number, currIdx : number) => {
-                if (currIdx == 0) {
-                    data.output += `<div>0x${(start + currIdx).toString(16).padStart(8, '0').toUpperCase()} || `;
-                }
-                else if (currIdx % numberOfBin == 0) {
+                if (data.bufOffset == 0) {
                     // line feed
-                    data.output += `
-                    || ${data.lineBuf.toString('ascii').replace(/[^\x20-\x7E]/g, '.')}</div>
-                    <div>0x${(start + currIdx).toString(16).padStart(8, '0').toUpperCase()} || `;
+                    data.output += `<div><span class="offset">0x${(start + currIdx).toString(16).padStart(8, '0').toUpperCase()}</span> || `;
                     data.lineBuf = Buffer.allocUnsafe(numberOfBin);
-                    data.bufOffset = 0;
                 }
 
-                data.output += `<span class="test"> ${val.toString(16).padStart(2, '0').toUpperCase()} </span>`;
+                data.output += `<span class="hex_data"> ${val.toString(16).padStart(2, '0').toUpperCase()} </span>`;
                 data.lineBuf.writeUInt8(val, data.bufOffset);
                 data.bufOffset++;
+
+                if (data.bufOffset == numberOfBin) {
+                    data.output += ` || ${data.lineBuf.toString('ascii').replace(/[^\x20-\x7E]/g, '.')}</div>`;
+                    data.bufOffset = 0;
+                }
 
                 return data;
             }, { output : "", lineBuf : Buffer.allocUnsafe(numberOfBin), bufOffset : 0}).output;
@@ -186,10 +188,9 @@ export class BinaryDataLoader {
     private _handleEvent(event : any) {
         switch (event.command) {
             case 'lazyLoad':
-                const sizeoOfLazyLoading : any = vscode.workspace.getConfiguration("conf.resource").get("lazyLoadingSize");
                 this._panel.webview.postMessage({
                     command : 'onload',
-                    lazyHTML : this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += sizeoOfLazyLoading),
+                    lazyHTML : this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize),
                     response : ''
                 });
                 break;
