@@ -12,9 +12,9 @@ export class BinaryFileLoader {
 
     private _binaryFileBuffer! : Buffer;
     private _fileState : Error | undefined;
-    private _metaInfo : loader.MetaInfoLoader;
+    private _metaInfo : loader.MetaInfoLoader | undefined;
 
-    private constructor (meta : loader.MetaInfoLoader) {
+    private constructor (meta : loader.MetaInfoLoader | undefined) {
         this._metaInfo = meta;
 
         this._binaryFileLoad();
@@ -39,7 +39,11 @@ export class BinaryFileLoader {
         return this.binaryFileLoader;
     }
 
-    public static binaryFileLoad(meta : loader.MetaInfoLoader) {
+    public static binaryFileLoad() {
+        BinaryFileLoader.binaryFileLoader = new BinaryFileLoader(undefined);
+    }
+
+    public static binaryFileLoadByMeta(meta : loader.MetaInfoLoader) {
         BinaryFileLoader.binaryFileLoader = new BinaryFileLoader(meta);
     }
 

@@ -8,9 +8,23 @@ import * as binLoader from './binaryDataLoader';
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	let metaInfoPick = vscode.window.createQuickPick();
+
+	metaInfoPick.items = ["default", "elf"].map(label => ({ label }));
+
 	let disposable = vscode.commands.registerCommand('extension.helloWorld', () => {
-		binLoader.BinaryDataLoader.createBinaryPanel(context.extensionPath);
-		vscode.window.showInformationMessage('Hello World!');
+		metaInfoPick.show();
+	});
+
+	metaInfoPick.title = "Choose binary format what you want to show. if not, shown as default viewer.";
+	metaInfoPick.onDidAccept(e => {
+		if (metaInfoPick.value != "") {
+			binLoader.BinaryDataLoader.createBinaryPanel(
+				context.extensionPath, metaInfoPick.value);
+		} else {
+			binLoader.BinaryDataLoader.createBinaryPanel(
+				context.extensionPath, metaInfoPick.selectedItems[0].label);
+		}
 	});
 
 	context.subscriptions.push(disposable);

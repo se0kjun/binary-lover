@@ -10,21 +10,20 @@ import * as bfileLoader from './binaryFileLoader';
 
 export class BinaryDataLoader {
     private static binaryDataLoader : BinaryDataLoader | undefined; 
-    private metaInfo : loader.MetaInfoLoader;
+    private metaInfo : loader.MetaInfoLoader | undefined;
 
     private _panel : vscode.WebviewPanel;
     private _activeDoc? : vscode.TextEditor;
     private binaryFileBuffer! : Buffer;
     private readonly _extensionPath : string;
+    private readonly _binaryFormat : string;
 
     private lazyLoadCnt : number;
 
-    public static createBinaryPanel(extensionPath : string) {
+    public static createBinaryPanel(extensionPath : string, binaryFormat : string) {
 		const column = vscode.window.activeTextEditor
 			? vscode.window.activeTextEditor.viewColumn
             : undefined;
-        const filePath : vscode.Uri = vscode.Uri.file(path.join(extensionPath, 'src', 'resources'));
-        const meta = new loader.MetaInfoLoader("elf", filePath);
 
         // Otherwise, create a new panel.
 		const panel = vscode.window.createWebviewPanel(
@@ -39,18 +38,24 @@ export class BinaryDataLoader {
 			}
         );
 
-        BinaryDataLoader.binaryDataLoader = new BinaryDataLoader(panel, meta, extensionPath);
+        BinaryDataLoader.binaryDataLoader = new BinaryDataLoader(panel, binaryFormat, extensionPath);
     }
 
-    private constructor (panel : vscode.WebviewPanel, meta : loader.MetaInfoLoader, extPath : string) {
-        this.metaInfo = meta;
+    private constructor (panel : vscode.WebviewPanel, binFormat : string, extPath : string) {
         this._panel = panel;
         this._extensionPath = extPath;
+        this._binaryFormat = binFormat;
         this.lazyLoadCnt = 0;
 
-        bfileLoader.BinaryFileLoader.binaryFileLoad(this.metaInfo);
+        const filePath : vscode.Uri = vscode.Uri.file(path.join(this._extensionPath, 'src', 'resources'));
+        if (this._binaryFormat != "default") {
+            this.metaInfo = new loader.MetaInfoLoader(this._binaryFormat, filePath);
 
-        this.metaInfo.applyBinaryInfo();
+            bfileLoader.BinaryFileLoader.binaryFileLoadByMeta(this.metaInfo);
+            this.metaInfo.applyBinaryInfo();
+        } else {
+            bfileLoader.BinaryFileLoader.binaryFileLoad();
+        }
 
         this._update();
         this._panel.webview.onDidReceiveMessage(
@@ -77,6 +82,7 @@ export class BinaryDataLoader {
 
     private _buildHTML() : string {
         let aa = "";
+        if (this.metaInfo)
         this.metaInfo.fileMeta.forEach(
             item => {
                 let tmp = item.rawValue;
