@@ -14,10 +14,31 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"commands": [{
-			"command": "extension.helloWorld",
-			"title": "Hello World"
-		}]
+		"configuration": [
+			{
+				"title": "binary-lover",
+				"properties": {
+					"conf.resource.numberOfBinaryInLine": {
+						"type": "number",
+						"default": 16,
+						"description": "Specify how many binary shows in a line",
+						"scope": "resource"
+					},
+					"conf.resource.lazyLoadingSize": {
+						"type": "number",
+						"default": 1000,
+						"description": "Specify a number of line for lazy loading in a time",
+						"scope": "resource"
+					}
+				}
+			}
+		],
+		"commands": [
+			{
+				"command": "extension.helloWorld",
+				"title": "Hello World"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
