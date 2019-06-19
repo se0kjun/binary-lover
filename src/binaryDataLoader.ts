@@ -85,51 +85,31 @@ export class BinaryDataLoader {
         this._panel.webview.postMessage({});
     }
 
-    private _buildHTML() : string {
-        let aa = "";
-        if (this.metaInfo)
-        this.metaInfo.fileMeta.forEach(
-            item => {
-                let tmp = item.rawValue;
-                if (tmp != undefined) {
-                    if (item.fieldType == loader.FieldType.ARRAY) {
-                        let len = item.arrayLength;
-                        let size = item.arraySize;
-                        if (len) {
-                            Array.from({length : len}, (x, i) => {
-                                if (tmp && size) {
-                                    let value = item.rawEntryValue(i);
-                                    if (value) {
-                                        value.forEach((entry, idx) => {
-                                            let mttmp = item.arrayEntryField[idx];
-                                            aa += `<div> &gt&gt&gt ${entry.binaryStartPos}
-                                            || ${entry.binaryEndPos}
-                                            || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', entry.binaryStartPos, entry.binaryEndPos)}
-                                            || ${mttmp.fieldDescription} </div>`;
-                                        });
-                                    }
-                                    else {
-                                        aa += `<div>${tmp.binaryStartPos + i*size}
-                                        || ${tmp.binaryEndPos + i*size}
-                                        || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', tmp.binaryStartPos + i*size, tmp.binaryStartPos + i*size + size)}
-                                        || ${item.fieldDescription} </div>`;
-                                    }
-                                    aa += "<div>======</div>";
-                                }
-                            });
-                        }
-                    }
-                    else {
-                        aa += `<div>${tmp.binaryStartPos} 
-                        || ${tmp.binaryEndPos} 
-                        || ${bfileLoader.BinaryFileLoader.instance.openedFile.toString('hex', tmp.binaryStartPos, tmp.binaryEndPos)}
-                        || ${item.fieldDescription} </div>`;
-                    }
-                }
-            }
-        );
+    private _initMetaViewer() : string {
+        const scriptUri = vscode.Uri.file(
+            path.join(this._extensionPath, 'media', 'main.js')).with({ scheme: 'vscode-resource' });
+        const styleUri = vscode.Uri.file(
+            path.join(this._extensionPath, 'media', 'main.css')).with({ scheme: 'vscode-resource'});
 
-        return `<html><body>${aa}</body></html>`;
+        return `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src vscode-resource:; style-src vscode-resource:;">
+            <title>Binary viewer</title>
+        </head>
+        <body>
+            <div id="header">
+                ${this._buildHeaderHTML()}
+            </div>
+            <div id="container">
+                ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize)}
+            </div>
+            <script src="${scriptUri}"></script>
+            <link rel="stylesheet" href="${styleUri}"/>
+        </body>
+        </html>`;
     }
 
     private _initDefaultViewer() : string {
@@ -137,28 +117,30 @@ export class BinaryDataLoader {
             path.join(this._extensionPath, 'media', 'main.js')).with({ scheme: 'vscode-resource' });
         const styleUri = vscode.Uri.file(
             path.join(this._extensionPath, 'media', 'main.css')).with({ scheme: 'vscode-resource'});
-        const nonce = this._getNonce();
 
         return `<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src 'nonce-${nonce}'; style-src vscode-resource:;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src vscode-resource:; style-src vscode-resource:;">
             <title>Binary viewer</title>
         </head>
         <body>
             <div id="container">
                 ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize)}
             </div>
-            <script nonce="${nonce}" src="${scriptUri}"></script>
+            <script src="${scriptUri}"></script>
             <link rel="stylesheet" href="${styleUri}"/>
         </body>
         </html>`;
     }
 
     private _lazyLoadHTML(start : number, end : number) : string {
-        const numberOfBin : any = vscode.workspace.getConfiguration("conf.resource").get("numberOfBinaryInLine");
+        let numberOfBin : any = vscode.workspace.getConfiguration("conf.resource").get("numberOfBinaryInLine");
+        if (end - start < numberOfBin) {
+            numberOfBin = end - start;
+        }
 
         return bfileLoader.BinaryFileLoader.instance.openedFile.slice(start, end)
             .reduce((data : { output : string, lineBuf : Buffer, bufOffset : number }, val : number, currIdx : number) => {
@@ -172,7 +154,7 @@ export class BinaryDataLoader {
                 data.lineBuf.writeUInt8(val, data.bufOffset);
                 data.bufOffset++;
 
-                if (data.bufOffset == numberOfBin) {
+                if (data.bufOffset == numberOfBin || (end - start == data.bufOffset)) {
                     data.output += ` || ${data.lineBuf.toString('ascii').replace(/[^\x20-\x7E]/g, '.')}</div>`;
                     data.bufOffset = 0;
                 }
@@ -181,8 +163,63 @@ export class BinaryDataLoader {
             }, { output : "", lineBuf : Buffer.allocUnsafe(numberOfBin), bufOffset : 0}).output;
     }
 
+    private _buildHeaderHTML() : string {
+        const numberOfBin : any = vscode.workspace.getConfiguration("conf.resource").get("numberOfBinaryInLine");
+
+        if (this.metaInfo) {
+            return this.metaInfo.fileMeta.reduce((output, item) => {
+                if (item.fieldType != loader.FieldType.ARRAY && item.rawValue) {
+                    let pos = item.rawValue;
+                    output += `<div> ${item.fieldDescription} </div>
+                    ${this._lazyLoadHTML(pos.binaryStartPos, pos.binaryEndPos)}`;
+                }
+                else if (item.rawValue){
+                    output += `<div> ${item.fieldDescription} </div>
+                    ${this._buildArrayTypeHTML(item)}`;
+                }
+
+                return output;
+            }, "");
+        }
+
+        return "";
+    }
+
+    private _buildArrayTypeHTML(item : loader.MetaField) : string {
+        let arrLen = item.arrayLength;
+        let arrSize = item.arraySize;
+        let output = "";
+
+        if (arrLen && arrSize && item.rawValue) {
+            let tmp = item.rawValue;
+            Array.from({length : arrLen}, (x, i) => {
+                let arrItem = item.rawEntryValue(i);
+                if (arrItem) {
+                    arrItem.forEach((entry, idx) => {
+                        let fieldOfarrItem = item.arrayEntryField[idx];
+                        output += `<div> ${fieldOfarrItem.fieldDescription} </div>
+                        ${this._lazyLoadHTML(entry.binaryStartPos, entry.binaryEndPos)}`;
+                    })
+                }
+                else if (arrSize) {
+                    output += `<div> ${item.fieldDescription} </div>
+                    ${this._lazyLoadHTML(tmp.binaryStartPos + i * arrSize,
+                        tmp.binaryEndPos + ((i + 1) * arrSize))}`;
+                }
+            });
+        }
+
+        return output;
+    }
+
     private _update() {
-        this._panel.webview.html = this._initDefaultViewer();;
+        if (this._binaryFormat != "default") {
+            this._panel.webview.html = this._initMetaViewer();
+            this._panel.webview.html += this._initDefaultViewer();
+        }
+        else {
+            this._panel.webview.html = this._initDefaultViewer();
+        }
     }
 
     private _handleEvent(event : any) {
@@ -195,14 +232,5 @@ export class BinaryDataLoader {
                 });
                 break;
         }
-    }
-
-    private _getNonce() : string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
     }
 }

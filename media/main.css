@@ -6,6 +6,6 @@ div {
     font-family: var(--vscode-editor-font-family);
 }
 
-div:not(#container):hover {
+div:not(#container):not(#header):hover {
     background-color: grey;
 }
