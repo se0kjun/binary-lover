@@ -23,4 +23,17 @@
                 break;
         }
     });
+
+    document.addEventListener('copy', function(e) {
+        var selObj = window.getSelection();
+        if (selObj.rangeCount) {
+            var copyElem = selObj.getRangeAt(0).cloneContents();
+            var data = "";
+            copyElem.querySelectorAll('.hex_data').forEach(value => {
+                data += value.textContent.trimLeft();
+            });
+            e.clipboardData.setData('text/plain', data);
+            e.preventDefault();
+        }
+    });
 }());
