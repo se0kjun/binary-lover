@@ -19,35 +19,35 @@ div:not(#container):not(#header):hover {
 }
 
 [data-tooltip-dec]:hover {
-	position: relative;
+    position: relative;
 }
 
 [data-tooltip-dec]:hover:after {
-	background-color: #000000;
-	background-color: rgba(0, 0, 0, 0.8);
+    background-color: #000000;
+    background-color: rgba(0, 0, 0, 0.8);
 
-	-webkit-box-shadow: 0px 0px 3px 1px rgba(50, 50, 50, 0.4);
-	-moz-box-shadow: 0px 0px 3px 1px rgba(50, 50, 50, 0.4);
-	box-shadow: 0px 0px 3px 1px rgba(50, 50, 50, 0.4);
+    -webkit-box-shadow: 0px 0px 3px 1px rgba(50, 50, 50, 0.4);
+    -moz-box-shadow: 0px 0px 3px 1px rgba(50, 50, 50, 0.4);
+    box-shadow: 0px 0px 3px 1px rgba(50, 50, 50, 0.4);
 
-	-webkit-border-radius: 5px;
-	-moz-border-radius: 5px;
-	border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
 
-	color: #FFFFFF;
-	font-size: 12px;
-	content: 'dec: ' attr(data-tooltip-dec) '\aoffset: ' attr(offset);
+    color: #FFFFFF;
+    font-size: 12px;
+    content: 'dec: ' attr(data-tooltip-dec) '\aoffset: ' attr(offset);
 
     margin-bottom: 10px;
-	top: 130%;
-	left: 0;
-	padding: 7px 12px;
-	position: absolute;
-	width: auto;
-	min-width: 150px;
-	max-width: 400px;
+    top: 130%;
+    left: 0;
+    padding: 7px 12px;
+    position: absolute;
+    width: auto;
+    min-width: 150px;
+    max-width: 400px;
     word-wrap: break-word;
     white-space: pre;
 
-	z-index: 9999;
+    z-index: 9999;
 }

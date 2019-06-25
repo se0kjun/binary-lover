@@ -9,11 +9,19 @@ import * as binLoader from './binaryDataLoader';
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 	let metaInfoPick = vscode.window.createQuickPick();
+	let offsetInput = vscode.window.createInputBox();
 
 	metaInfoPick.items = ["default", "elf"].map(label => ({ label }));
 
-	let disposable = vscode.commands.registerCommand('extension.helloWorld', () => {
+	let disposable = vscode.commands.registerCommand('extension.showBinary', () => {
 		metaInfoPick.show();
+	});
+
+	vscode.commands.registerCommand('extension.goToOffset', () => {
+		offsetInput.onDidAccept(() => {
+			binLoader.BinaryDataLoader.goToParticularOffset(Number.parseInt(offsetInput.value));
+		});
+		offsetInput.show();
 	});
 
 	metaInfoPick.title = "Choose binary format what you want to show. if not, shown as default viewer.";

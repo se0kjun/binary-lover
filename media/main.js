@@ -21,6 +21,9 @@
                 dataContainer.innerHTML += message.lazyHTML;
                 loadLock = false;
                 break;
+            case 'gotoOffset':
+                console.log("test");
+                break;
         }
     });
 

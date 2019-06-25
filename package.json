@@ -10,7 +10,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:extension.helloWorld"
+		"onCommand:extension.showBinary"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -35,8 +35,12 @@
 		],
 		"commands": [
 			{
-				"command": "extension.helloWorld",
-				"title": "Hello World"
+				"command": "extension.showBinary",
+				"title": "Show binary data"
+			},
+			{
+				"command": "extension.goToOffset",
+				"title": "Go to specific offset"
 			}
 		]
 	},

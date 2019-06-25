@@ -85,6 +85,15 @@ export class BinaryDataLoader {
         this._panel.webview.postMessage({});
     }
 
+    public static goToParticularOffset(offset : number) {
+        if (BinaryDataLoader.binaryDataLoader) {
+            BinaryDataLoader.binaryDataLoader._panel.webview.postMessage({
+                command : 'gotoOffset',
+                offset : offset
+            });
+        }
+    }
+
     private _initMetaViewer() : string {
         const scriptUri = vscode.Uri.file(
             path.join(this._extensionPath, 'media', 'main.js')).with({ scheme: 'vscode-resource' });
