@@ -150,12 +150,12 @@ export class BinaryDataLoader {
                     data.lineBuf = Buffer.allocUnsafe(numberOfBin);
                 }
 
-                data.output += `<span class="hex_data"> ${val.toString(16).padStart(2, '0').toUpperCase()} </span>`;
+                data.output += `<span class="hex_data" data-tooltip-dec="${val}" offset="${currIdx}"> ${val.toString(16).padStart(2, '0').toUpperCase()} </span>`;
                 data.lineBuf.writeUInt8(val, data.bufOffset);
                 data.bufOffset++;
 
                 if (data.bufOffset == numberOfBin || (end - start == data.bufOffset)) {
-                    data.output += ` || ${data.lineBuf.toString('ascii').replace(/[^\x20-\x7E]/g, '.')}</div>`;
+                    data.output += ` || <span class="char_data">${data.lineBuf.toString('ascii').replace(/[^\x20-\x7E]/g, '.')}</span></div>`;
                     data.bufOffset = 0;
                 }
 
