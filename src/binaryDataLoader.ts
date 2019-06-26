@@ -115,6 +115,7 @@ export class BinaryDataLoader {
             <div id="container">
                 ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize)}
             </div>
+            <div id="loadOffset" data-load-size="${this._lazyLoadSize}" data-load-offset="${this.lazyLoadCnt}"></div>
             <script src="${scriptUri}"></script>
             <link rel="stylesheet" href="${styleUri}"/>
         </body>
@@ -139,6 +140,7 @@ export class BinaryDataLoader {
             <div id="container">
                 ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize)}
             </div>
+            <div id="loadOffset" data-load-size="${this._lazyLoadSize}" data-load-offset="${this.lazyLoadCnt}"></div>
             <script src="${scriptUri}"></script>
             <link rel="stylesheet" href="${styleUri}"/>
         </body>
@@ -159,7 +161,7 @@ export class BinaryDataLoader {
                     data.lineBuf = Buffer.allocUnsafe(numberOfBin);
                 }
 
-                data.output += `<span class="hex_data" data-tooltip-dec="${val}" offset="${currIdx}"> ${val.toString(16).padStart(2, '0').toUpperCase()} </span>`;
+                data.output += `<span class="hex_data" data-tooltip-dec="${val}" offset="${start + currIdx}"> ${val.toString(16).padStart(2, '0').toUpperCase()} </span>`;
                 data.lineBuf.writeUInt8(val, data.bufOffset);
                 data.bufOffset++;
 
@@ -234,11 +236,26 @@ export class BinaryDataLoader {
     private _handleEvent(event : any) {
         switch (event.command) {
             case 'lazyLoad':
+                let requestSpecificEnd = event.loadEnd;
+                let requestLoadEnd = this.lazyLoadCnt + this._lazyLoadSize;
+                let command = 'onload';
+                let gotoOffset = 0;
+
+                if (requestSpecificEnd != undefined) {
+                    requestLoadEnd = this.lazyLoadCnt + requestSpecificEnd;
+                    command = 'gotoOffsetAfterLoad';
+                    gotoOffset = event.gotoOffset;
+                }
+
                 this._panel.webview.postMessage({
-                    command : 'onload',
-                    lazyHTML : this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize),
-                    response : ''
+                    command : command,
+                    lazyHTML : this._lazyLoadHTML(this.lazyLoadCnt, requestLoadEnd),
+                    loadedOffset : requestLoadEnd,
+                    gotoOffset : gotoOffset,
+                    response : '',
                 });
+
+                this.lazyLoadCnt = requestLoadEnd;
                 break;
         }
     }

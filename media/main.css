@@ -10,6 +10,11 @@ div:not(#container):not(#header):hover {
     background-color: grey;
 }
 
+.selection-goto {
+    background: lightblue;
+    color: black;
+}
+
 ::selection {
     user-select: none;
 }
