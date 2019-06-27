@@ -2,6 +2,24 @@ span {
     font-family: var(--vscode-editor-font-family);
 }
 
+span.hex_data {
+    width: 3ch;
+    display: inline-block;
+    text-align: center;
+    align-content: center;
+}
+
+span.removed_data {
+    width: 3ch;
+    display: inline-block;
+    white-space: pre;
+    background-color: red;
+}
+
+span.modified {
+    color: red;
+}
+
 div {
     font-family: var(--vscode-editor-font-family);
 }
@@ -13,6 +31,12 @@ div:not(#container):not(#header):hover {
 .selection-goto {
     background: lightblue;
     color: black;
+}
+
+.edit-bin {
+    width: 2ch;
+    padding: 0;
+    margin: 0;
 }
 
 ::selection {
