@@ -83,6 +83,7 @@
     });
 
     document.addEventListener('keydown', function(e) {
+        let selObj = window.getSelection();
         if (e.srcElement.classList.contains('edit-bin')) {
             let value = String(e.srcElement.value);
             if (e.key == 'Escape' || e.key == 'Enter') {
@@ -146,6 +147,16 @@
             } else {
                 e.preventDefault();
             }
+        }
+        else if (selObj.rangeCount && e.key == 'Backspace') {
+            let rangeObj = selObj.getRangeAt(0);
+            let removeElem = rangeObj.commonAncestorContainer;
+            removeElem.querySelectorAll('.hex_data').forEach(value => {
+                if (rangeObj.intersectsNode(value)) {
+                    value.innerHTML = "  ";
+                    value.setAttribute('class', 'hex_data removed_data modified');
+                }
+            });
         }
     });
 
