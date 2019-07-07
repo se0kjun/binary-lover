@@ -24,13 +24,73 @@ div {
     font-family: var(--vscode-editor-font-family);
 }
 
-div:not(#container):not(#header):hover {
+#nav-header {
+    position: sticky;
+    padding: 5px;
+    border-bottom: #FFFFFF 2px;
+    top: 0;
+    background: #999;
+}
+
+#nav-header div {
+    display: inline-block;
+}
+
+div.bin-wrapper:hover,
+div.field-item:not(.array-items):hover
+div.array-item:hover {
     background-color: grey;
+}
+
+.array-items-description {
+    margin-top: 5px;
+    color: crimson;
 }
 
 .selection-goto {
     background: lightblue;
     color: black;
+}
+
+.offset-col, .char-data-col, .hex-data-col {
+    display: inline-block;
+}
+
+.collapse {
+    display: none;
+}
+
+.caret {
+    position: relative;
+    cursor: pointer;
+}
+
+.field-description {
+    margin-top: 5px;
+    min-width: 150px;
+    cursor: pointer;
+}
+
+.field-description:after {
+    content: '';
+    position: relative;
+    top: 10px;
+    left: 5px;
+    border-top: 6px solid #fff;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+}
+
+.field-description:hover:before {
+    border-top-color: #222;
+}
+
+.field-item {
+    padding-left: 10px;
+}
+
+.hex-data-col {
+    min-width: 400px;
 }
 
 .edit-bin {

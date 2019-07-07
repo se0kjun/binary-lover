@@ -7,6 +7,7 @@
     let loadedOffset = document.getElementById('loadOffset').getAttribute('data-load-offset');
     let gotoElem = undefined;
     let selectedElemValue = 0;
+    let editableElement;
 
     window.addEventListener('scroll', function(ev) {
         if (window.scrollY / (dataContainer.scrollHeight - window.innerHeight) > 0.9
@@ -59,6 +60,17 @@
         }
     });
 
+    Array.from(document.getElementsByClassName('field-description')).forEach(function(elem) {
+        elem.addEventListener('click', function(e) {
+            let collapseElem = e.srcElement.nextElementSibling;
+            if (collapseElem.classList.contains('collapse')) {
+                collapseElem.classList.remove('collapse');
+            } else {
+                collapseElem.classList.add('collapse');
+            }
+        });
+    });
+
     document.addEventListener('copy', function(e) {
         var selObj = window.getSelection();
         if (selObj.rangeCount) {
@@ -73,11 +85,17 @@
     });
 
     document.addEventListener('dblclick', function(mouse) {
+        if (editableElement != undefined) {
+            let value = editableElement.firstElementChild.value;
+            editableElement.innerHTML = value;
+        }
+
         let mouseTarget = mouse.srcElement;
         if (mouseTarget.classList.contains('hex_data')) {
             let value = mouseTarget.innerText;
             selectedElemValue = value;
             mouseTarget.innerHTML = `<input class="edit-bin" type="text" value="${value.trim()}" maxlength="2">`;
+            editableElement = mouseTarget;
             focusToEnd(mouseTarget.firstElementChild);
         }
     });

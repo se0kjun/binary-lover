@@ -109,7 +109,10 @@ export class BinaryDataLoader {
             <title>Binary viewer</title>
         </head>
         <body>
-            <div id="header">
+            <div id="nav-header">
+            <div id="bin-save">SaveAs</div>
+            </div>
+            <div id="meta-header">
                 ${this._buildHeaderHTML()}
             </div>
             <div id="container">
@@ -137,6 +140,9 @@ export class BinaryDataLoader {
             <title>Binary viewer</title>
         </head>
         <body>
+            <div id="nav-header">
+            <div id="bin-save">SaveAs</div>
+            </div>
             <div id="container">
                 ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize)}
             </div>
@@ -157,7 +163,10 @@ export class BinaryDataLoader {
             .reduce((data : { output : string, lineBuf : Buffer, bufOffset : number }, val : number, currIdx : number) => {
                 if (data.bufOffset == 0) {
                     // line feed
-                    data.output += `<div><span class="offset">0x${(start + currIdx).toString(16).padStart(8, '0').toUpperCase()}</span> || `;
+                    data.output += `<div class="bin-wrapper">
+                    <div class="offset-col">
+                    <span class="offset">0x${(start + currIdx).toString(16).padStart(8, '0').toUpperCase()}</span>
+                    </div><div class="hex-data-col"> || `;
                     data.lineBuf = Buffer.allocUnsafe(numberOfBin);
                 }
 
@@ -166,7 +175,11 @@ export class BinaryDataLoader {
                 data.bufOffset++;
 
                 if (data.bufOffset == numberOfBin || (end - start == data.bufOffset)) {
-                    data.output += ` || <span class="char_data">${data.lineBuf.toString('ascii').replace(/[^\x20-\x7E]/g, '.')}</span></div>`;
+                    data.output += `</div>
+                    <div class="char-data-col"> || 
+                    <span class="char_data">${data.lineBuf.toString('ascii').replace(/[^\x20-\x7E]/g, '.')}</span>
+                    </div>
+                    </div>`;
                     data.bufOffset = 0;
                 }
 
@@ -179,14 +192,20 @@ export class BinaryDataLoader {
 
         if (this.metaInfo) {
             return this.metaInfo.fileMeta.reduce((output, item) => {
-                if (item.fieldType != loader.FieldType.ARRAY && item.rawValue) {
-                    let pos = item.rawValue;
-                    output += `<div> ${item.fieldDescription} </div>
-                    ${this._lazyLoadHTML(pos.binaryStartPos, pos.binaryEndPos)}`;
-                }
-                else if (item.rawValue){
-                    output += `<div> ${item.fieldDescription} </div>
-                    ${this._buildArrayTypeHTML(item)}`;
+                if (item.rawValue) {
+                    if (item.fieldType == loader.FieldType.PLAIN) {
+                        let pos = item.rawValue;
+                        output += `<div class="header-info" id="${item.fieldId}">
+                        <a class="field-description">${item.fieldDescription}</a>
+                        <div class="field-item collapse">${this._lazyLoadHTML(pos.binaryStartPos, pos.binaryEndPos)}</div>
+                        </div>`;
+                    } else if (item.fieldType == loader.FieldType.ARRAY) {
+                        let arrayHTMLOutput = this._buildArrayTypeHTML(item);
+                        output += `<div class="header-info" id="${item.fieldId}">
+                        <a class="field-description">${item.fieldDescription} (${arrayHTMLOutput.length})</a>
+                        <div class="field-item array-items collapse">${arrayHTMLOutput.output}</div>
+                        </div>`;
+                    }
                 }
 
                 return output;
@@ -196,31 +215,40 @@ export class BinaryDataLoader {
         return "";
     }
 
-    private _buildArrayTypeHTML(item : loader.MetaField) : string {
+    private _buildArrayTypeHTML(item : loader.MetaField) : { length : number, output : string } {
         let arrLen = item.arrayLength;
         let arrSize = item.arraySize;
-        let output = "";
+        let ret : { length : number, output : string } = {
+            'length' : 0,
+            'output' : ""
+        };
 
         if (arrLen && arrSize && item.rawValue) {
             let tmp = item.rawValue;
+            ret.length = arrLen;
+
             Array.from({length : arrLen}, (x, i) => {
                 let arrItem = item.rawEntryValue(i);
                 if (arrItem) {
+                    ret.output += `<div class="array-items-description">${item.fieldDescription} (${i+1})</div>`
                     arrItem.forEach((entry, idx) => {
                         let fieldOfarrItem = item.arrayEntryField[idx];
-                        output += `<div> ${fieldOfarrItem.fieldDescription} </div>
-                        ${this._lazyLoadHTML(entry.binaryStartPos, entry.binaryEndPos)}`;
+                        ret.output += `<div class="array-item-description"> ${fieldOfarrItem.fieldDescription} </div>
+                        <div class="field-item array-item">${this._lazyLoadHTML(entry.binaryStartPos, entry.binaryEndPos)}</div>`;
                     })
                 }
                 else if (arrSize) {
-                    output += `<div> ${item.fieldDescription} </div>
-                    ${this._lazyLoadHTML(tmp.binaryStartPos + i * arrSize,
-                        tmp.binaryEndPos + ((i + 1) * arrSize))}`;
+                    ret.output += `<div class="array-items-description">${item.fieldDescription} (${i+1})</div>
+                    <div class="array-item-description"> ${item.fieldDescription} </div>
+                    <div class="field-item array-item">${this._lazyLoadHTML(tmp.binaryStartPos + i * arrSize,
+                        tmp.binaryEndPos + ((i + 1) * arrSize))} </div>`;
                 }
             });
+
+            return ret;
         }
 
-        return output;
+        return ret;
     }
 
     private _update() {
