@@ -7,6 +7,7 @@ import * as util from 'util';
 
 import * as loader from './metaInfoLoader';
 import * as bfileLoader from './binaryFileLoader';
+import { BinaryEditHelper } from './binaryEditHelper';
 
 export class BinaryDataLoader {
     private static binaryDataLoader : BinaryDataLoader | undefined; 
@@ -15,6 +16,7 @@ export class BinaryDataLoader {
     private _panel : vscode.WebviewPanel;
     private _activeDoc? : vscode.TextEditor;
     private binaryFileBuffer! : Buffer;
+    private binaryEditor : BinaryEditHelper;
     private readonly _extensionPath : string;
     private readonly _binaryFormat : string;
     private readonly _lazyLoadSize : number;
@@ -51,6 +53,7 @@ export class BinaryDataLoader {
         this._binaryFormat = binFormat;
         this._lazyLoadSize = sizeOfLazyLoading + sizeOfLazyLoading % numberOfBin;
         this.lazyLoadCnt = 0;
+        this.binaryEditor = new BinaryEditHelper();
 
         const filePath : vscode.Uri = vscode.Uri.file(path.join(this._extensionPath, 'src', 'resources'));
         if (this._binaryFormat != "default") {
@@ -284,6 +287,21 @@ export class BinaryDataLoader {
                 });
 
                 this.lazyLoadCnt = requestLoadEnd;
+                break;
+            case 'removed':
+                this.binaryEditor.editBinary(event);
+                break;
+            case 'modified':
+                this.binaryEditor.editBinary(event);
+                break;
+            case 'restoreCheck':
+                this._panel.webview.postMessage({
+                    command : 'onload',
+                    lazyHTML : this._lazyLoadHTML(this._lazyLoadSize, this.lazyLoadCnt),
+                    loadedOffset : this.lazyLoadCnt
+                });
+                this._panel.webview.postMessage(
+                    this.binaryEditor.restoreState());
                 break;
         }
     }
