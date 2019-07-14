@@ -13,6 +13,7 @@ export class BinaryFileLoader {
     private _binaryFileBuffer! : Buffer;
     private _fileState : Error | undefined;
     private _metaInfo : loader.MetaInfoLoader | undefined;
+    private _filePath : vscode.Uri | undefined;
 
     private constructor (meta : loader.MetaInfoLoader | undefined) {
         this._metaInfo = meta;
@@ -22,6 +23,10 @@ export class BinaryFileLoader {
 
     get openedFile () {
         return this._binaryFileBuffer;
+    }
+
+    get openedFilePath() {
+        return this._filePath;
     }
 
     get metaLoader () {
@@ -54,9 +59,9 @@ export class BinaryFileLoader {
                 "Cannot show hexdump because there is no active text editor.");
             return;
         }
-        const filePath = vscode.window.activeTextEditor.document.uri;
+        this._filePath = vscode.window.activeTextEditor.document.uri;
 
-        this._binaryFileBuffer = fs.readFileSync(filePath.path);
+        this._binaryFileBuffer = fs.readFileSync(this._filePath.path);
         // await readFileAsync(filePath.path).then(
         //     val => {
         //         this._binaryFileBuffer = val;

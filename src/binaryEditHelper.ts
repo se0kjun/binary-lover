@@ -1,6 +1,8 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import { BinaryFileLoader } from './binaryFileLoader';
+import * as fs from 'fs';
 
 export enum EditType {
     REMOVED = "removed",
@@ -44,6 +46,13 @@ export class EditState {
     }
 }
 
+interface SaveContext {
+    readonly originalBuf : Buffer;
+    savedBuf : Buffer;
+    savedBufOffset : number;
+    lastRemovedOffset : number;
+}
+
 export class BinaryEditHelper {
     private binaryEdit : Map<number, EditState>;
 
@@ -60,10 +69,47 @@ export class BinaryEditHelper {
         this.binaryEdit.set(editData.offset, editData);
     }
 
-    public saveAsFile(name : string) {
+    public saveAsFile() {
+        let saveFileName = vscode.window.createInputBox();
+        saveFileName.show();
+		saveFileName.onDidAccept(() => {
+            if (saveFileName.value.indexOf("/") >= 0) {
+                this.saveFile(saveFileName.value);
+            } else {
+                let saveFilePath = BinaryFileLoader.instance.openedFilePath;
+                if (saveFilePath) {
+                    this.saveFile(
+                        saveFilePath.path.substring(0, saveFilePath.path.lastIndexOf("/") + 1) + saveFileName.value);
+                }
+            }
+		});
     }
 
-    public saveFile(path : string) {
+    public saveFile(path : string | undefined) {
+        if (path) {
+            fs.writeFile(path, this.applyChanges(), function(err) {
+                if (err) {
+                    return vscode.window.showErrorMessage(err.message);
+                }
+
+                vscode.window.showInformationMessage("File saved successfully: " + path);
+            });
+        } else {
+            let saveFilePath = BinaryFileLoader.instance.openedFilePath;
+            if (saveFilePath) {
+                fs.writeFile(saveFilePath.path, this.applyChanges(), function(err) {
+                    if (err) {
+                        return vscode.window.showErrorMessage(err.message);
+                    }
+
+                    if (saveFilePath) {
+                        vscode.window.showInformationMessage("File saved successfully: " + saveFilePath.path);
+                    }
+                });
+            } else {
+                vscode.window.showErrorMessage("File path not found");
+            }
+        }
     }
 
     public restoreState() : { command : string, removed : Array<number>, modified : Array<{offset:number, data:string}> } {
@@ -86,5 +132,49 @@ export class BinaryEditHelper {
             removed : removedElem,
             modified : modifiedElem
         };
+    }
+
+    private applyChanges() : Buffer {
+        let data = BinaryFileLoader.instance.openedFile;
+        let modifiedItems =
+            Array.from(this.binaryEdit.values()).filter(item => item.type == EditType.MODIFIED).sort((a, b) => a.offset - b.offset);
+        let removedItems =
+            Array.from(this.binaryEdit.values()).filter(item => item.type == EditType.REMOVED).sort((a, b) => a.offset - b.offset);
+
+        modifiedItems.forEach(item => {
+            if (item.parseData) {
+                data[item.offset] = item.parseData;
+            }
+        });
+
+        if (removedItems.length == 0) {
+            return data;
+        }
+
+        let appliedBuf = removedItems.reduce((prev : SaveContext, curr) => {
+            let copiedData = prev.originalBuf.slice(prev.lastRemovedOffset, curr.offset);
+            copiedData.forEach(bin => {
+                prev.savedBuf.writeUInt8(bin, prev.savedBufOffset);
+                prev.savedBufOffset++;
+            });
+            prev.lastRemovedOffset = curr.offset+1;
+
+            return prev;
+        }, {
+            originalBuf : data,
+            savedBuf : Buffer.alloc(data.length - removedItems.length),
+            savedBufOffset : 0,
+            lastRemovedOffset : 0
+        });
+
+        if (appliedBuf.savedBufOffset+1 != appliedBuf.savedBuf.length) {
+            let remaining = appliedBuf.savedBufOffset;
+            data.slice(appliedBuf.lastRemovedOffset).forEach(bin => {
+                appliedBuf.savedBuf.writeUInt8(bin, remaining);
+                remaining++;
+            })
+        }
+
+        return appliedBuf.savedBuf;
     }
 }

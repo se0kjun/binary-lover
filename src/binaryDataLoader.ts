@@ -113,7 +113,8 @@ export class BinaryDataLoader {
         </head>
         <body>
             <div id="nav-header">
-            <div id="bin-save">SaveAs</div>
+            <div id="bin-save">Save</div>
+            <div id="bin-saveas">SaveAs</div>
             </div>
             <div id="meta-header">
                 ${this._buildHeaderHTML()}
@@ -144,7 +145,8 @@ export class BinaryDataLoader {
         </head>
         <body>
             <div id="nav-header">
-            <div id="bin-save">SaveAs</div>
+            <div id="bin-save">Save</div>
+            <div id="bin-saveas">SaveAs</div>
             </div>
             <div id="container">
                 ${this._lazyLoadHTML(this.lazyLoadCnt, this.lazyLoadCnt += this._lazyLoadSize)}
@@ -302,6 +304,12 @@ export class BinaryDataLoader {
                 });
                 this._panel.webview.postMessage(
                     this.binaryEditor.restoreState());
+                break;
+            case 'save':
+                this.binaryEditor.saveFile(undefined);
+                break;
+            case 'saveas':
+                this.binaryEditor.saveAsFile();
                 break;
         }
     }

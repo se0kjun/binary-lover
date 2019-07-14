@@ -92,6 +92,18 @@
         });
     });
 
+    document.getElementById('bin-save').addEventListener('click', function(e) {
+        vscode.postMessage({
+            command : 'save'
+        });
+    });
+
+    document.getElementById('bin-saveas').addEventListener('click', function(e) {
+        vscode.postMessage({
+            command : 'saveas'
+        });
+    });
+
     document.addEventListener('copy', function(e) {
         var selObj = window.getSelection();
         if (selObj.rangeCount) {
