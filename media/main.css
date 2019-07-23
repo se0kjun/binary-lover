@@ -107,6 +107,10 @@ div.array-item:hover {
     background: lightblue;
 }
 
+.focus-hex {
+    background: yellowgreen;
+}
+
 [data-tooltip-dec]:hover {
     position: relative;
 }

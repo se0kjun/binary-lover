@@ -7,6 +7,7 @@
     let gotoElem = undefined;
     let selectedElemValue = 0;
     let editableElement;
+    let focusHexElem = undefined;
 
     window.addEventListener('load', function(e) {
         vscode.postMessage({
@@ -78,6 +79,17 @@
                     modifiedItem.innerHTML = item.data;
                 });
                 break;
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.srcElement.classList.contains('hex_data')) {
+            if (focusHexElem) {
+                focusHexElem.classList.remove('focus-hex');
+            }
+
+            focusHexElem = e.srcElement;
+            e.srcElement.classList.add('focus-hex');
         }
     });
 
